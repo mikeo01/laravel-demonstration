@@ -32,5 +32,6 @@ Route::get('/logout', [Controllers\AuthenticationController::class, 'logout'])->
 Route::middleware(['web', 'auth'])->group(function () {
     Route::middleware(UserActivity::class)->group(function () {
         Route::get('/home', fn () => view('app'))->name('home');
+        Route::get('/download', [Controllers\DownloadController::class, 'download']);
     });
 });

@@ -5,7 +5,7 @@ namespace App\Aggregates;
 use App\StorableEvents\UserRequestUriTracked;
 use Spatie\EventSourcing\AggregateRoots\AggregateRoot;
 
-class UserActivityAggregate extends AggregateRoot
+final class UserActivityAggregate extends AggregateRoot
 {
     /**
      * Tracked event

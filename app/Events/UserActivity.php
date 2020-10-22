@@ -11,7 +11,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Http\Request;
 use Illuminate\Queue\SerializesModels;
 
-class UserActivity
+final class UserActivity
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

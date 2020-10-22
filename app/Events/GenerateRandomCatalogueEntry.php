@@ -10,7 +10,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class GenerateRandomCatalogueEntry
+final class GenerateRandomCatalogueEntry
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

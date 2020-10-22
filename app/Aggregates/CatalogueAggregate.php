@@ -7,7 +7,7 @@ use App\Models\Product;
 use App\StorableEvents\NewCatalogueEntryAdded;
 use Spatie\EventSourcing\AggregateRoots\AggregateRoot;
 
-class CatalogueAggregate extends AggregateRoot
+final class CatalogueAggregate extends AggregateRoot
 {
     /**
      * Create catalogue entry

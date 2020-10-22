@@ -11474,13 +11474,13 @@ function main(sources) {
         .map(state => {
         var _a;
         if ((_a = state.childState) === null || _a === void 0 ? void 0 : _a.update) {
-            return {
+            return xstream_1.default.combine(xstream_1.default.of({
                 url: '/api/catalogues',
                 method: 'GET',
                 withCredentials: true,
                 accept: 'application/json',
                 category: 'catalogues'
-            };
+            }));
         }
     }).startWith({
         url: '/api/catalogues',
@@ -11568,6 +11568,7 @@ exports.CatalogueListingPane = (sources) => {
             .filter(catalogue => catalogue.id === id)
             .reduce((previous, next) => next, null);
         return snabbdom_pragma_1.default.createElement("div", null, card_1.Card("Products", [
+            snabbdom_pragma_1.default.createElement("a", { href: "/download", className: "btn btn-secondary my-4" }, "Download"),
             snabbdom_pragma_1.default.createElement("div", { className: "d-flex flex-column" },
                 snabbdom_pragma_1.default.createElement("button", { className: "btn btn-primary generate" }, "Generate Random"),
                 snabbdom_pragma_1.default.createElement("small", { className: "text-muted" },

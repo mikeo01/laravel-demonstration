@@ -17,13 +17,15 @@ function main ( sources: Sources ): Sinks {
         sources.state.stream
             .map( state => {
                 if ( state.childState?.update ) {
-                    return {
-                        url: '/api/catalogues',
-                        method: 'GET',
-                        withCredentials: true,
-                        accept: 'application/json',
-                        category: 'catalogues'
-                    };
+                    return xs.combine(
+                        xs.of( {
+                            url: '/api/catalogues',
+                            method: 'GET',
+                            withCredentials: true,
+                            accept: 'application/json',
+                            category: 'catalogues'
+                        } )
+                    );
                 }
             } ).startWith( {
                 url: '/api/catalogues',

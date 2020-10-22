@@ -6,7 +6,7 @@ use App\Events\GenerateRandomCatalogueEntry;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
-class GenerateRandomCatalogue extends Controller
+final class GenerateRandomCatalogue extends Controller
 {
     /**
      * Generate random
