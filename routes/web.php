@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,8 +14,11 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Protected routes
-Route::middleware('auth:sanctum')->group(function () {
-});
+// Authentication
+Route::get('/login', [Controllers\AuthenticationController::class, 'loginForm'])->name('loginForm');
+Route::post('/login', [Controllers\AuthenticationController::class, 'login'])->name('login');
 
-Route::get('/', fn () => view('app'));
+// Protected routes
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/home', fn () => view('app'))->name('home');
+});

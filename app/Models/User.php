@@ -12,6 +12,13 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
+     * Where does the connection live?
+     * 
+     * @var string
+     */
+    protected $connection = 'users';
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array

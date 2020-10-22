@@ -1,0 +1,1 @@
+<input class="form-control" type="{{ $type ?? 'text' }}" id="{{ $id ?? 'id-'.mt_rand() }}" name="{{ $name }}" placeholder="{{ $placeholder }}" {{ $required ? 'required' : '' }} value="{{ $value }}" />

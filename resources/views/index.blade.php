@@ -10,10 +10,10 @@
     @stack('js')
 </head>
 <body>
-    <div class="container-fluid">
-        @section('content')
-            <h1>Nothing to see here</h1>
-        @endsection
+    <div class="container">
+        <x-errors :errors="session('errors') ? session('errors')->getBag('default') : $errors" />
+
+        @yield('content')
     </div>
 </body>
 </html>
