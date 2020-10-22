@@ -2,9 +2,12 @@
 
 namespace App\Listeners;
 
+use App\Aggregates\UserActivity as AggregatesUserActivity;
+use App\Aggregates\UserActivityAggregate;
 use App\Events\UserActivity as EventsUserActivity;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
+use Ramsey\Uuid\Uuid;
 
 class UserActivity
 {
@@ -26,6 +29,8 @@ class UserActivity
      */
     public function handle(EventsUserActivity $event)
     {
-        dd($event->request);
+        UserActivityAggregate::retrieve(Uuid::uuid4()->toString())
+            ->track($event->request->user()->id, $event->request->getRequestUri())
+            ->persist();
     }
 }
