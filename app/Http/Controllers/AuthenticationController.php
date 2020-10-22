@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Login;
 use App\Models\Managers\UserManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,12 +28,25 @@ class AuthenticationController extends Controller
      * @param Request $request
      * @return RedirectResponse
      */
-    public function login(Request $request, UserManager $userManager): RedirectResponse
+    public function login(Login $request, UserManager $userManager): RedirectResponse
     {
         return $userManager->login($request->email, $request->password, null)
             ? redirect()->intended('home')
             : redirect()->back()->withInput()->withErrors([
                 'error' => 'Login Failed'
             ]);
+    }
+
+    /**
+     * Logout
+     *
+     * @param Request $request
+     * @return void
+     */
+    public function logout(Request $request)
+    {
+        Auth::logout();
+
+        return redirect()->route('login');
     }
 }

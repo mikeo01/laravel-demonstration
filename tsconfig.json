@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "target": "ES2015",
+        "jsxFactory": "React.createElement",
+        "module": "CommonJS"
+    },
+    "include": [
+        "resources/ts/**.ts",
+        "resources/ts/**.tsx"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}

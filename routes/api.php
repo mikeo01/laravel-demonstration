@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api as Controllers;
+use App\Http\Middleware\UserActivity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -15,4 +17,17 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware(['api', 'auth:sanctum'])->group(function () {
+    Route::middleware(UserActivity::class)->group(function () {
+        /**
+         * REST API to products
+         */
+        Route::resource('/products', Controllers\ProductController::class)
+            ->only(['index', 'store']);
+
+        /**
+         * RESST API to catalogues
+         */
+        Route::resource('/catalogues', Controllers\CatalogueController::class)
+            ->only(['index', 'store']);
+    });
 });

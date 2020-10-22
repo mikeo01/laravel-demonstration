@@ -25,6 +25,9 @@ Route::middleware([RedirectIfAuthenticated::class])->group(function () {
     Route::post('/login', [Controllers\AuthenticationController::class, 'login'])->name('login');
 });
 
+// Logout
+Route::get('/logout', [Controllers\AuthenticationController::class, 'logout'])->name('logout');
+
 // Protected routes
 Route::middleware(['web', 'auth'])->group(function () {
     Route::middleware(UserActivity::class)->group(function () {
