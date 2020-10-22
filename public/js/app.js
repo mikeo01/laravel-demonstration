@@ -11474,13 +11474,13 @@ function main(sources) {
         .map(state => {
         var _a;
         if ((_a = state.childState) === null || _a === void 0 ? void 0 : _a.update) {
-            return xstream_1.default.combine(xstream_1.default.of({
+            return {
                 url: '/api/catalogues',
                 method: 'GET',
                 withCredentials: true,
                 accept: 'application/json',
                 category: 'catalogues'
-            }));
+            };
         }
     }).startWith({
         url: '/api/catalogues',
