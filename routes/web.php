@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers;
+use App\Http\Middleware\RedirectIfAuthenticated;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,9 +15,14 @@ use App\Http\Controllers;
 |
 */
 
+// Default
+Route::get('/', fn () => redirect()->route('home'));
+
 // Authentication
-Route::get('/login', [Controllers\AuthenticationController::class, 'loginForm'])->name('loginForm');
-Route::post('/login', [Controllers\AuthenticationController::class, 'login'])->name('login');
+Route::middleware([RedirectIfAuthenticated::class])->group(function () {
+    Route::get('/login', [Controllers\AuthenticationController::class, 'loginForm'])->name('loginForm');
+    Route::post('/login', [Controllers\AuthenticationController::class, 'login'])->name('login');
+});
 
 // Protected routes
 Route::middleware(['web', 'auth'])->group(function () {
