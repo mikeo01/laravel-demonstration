@@ -13,9 +13,14 @@ class CreateActivitiesTable extends Migration
      */
     public function up()
     {
-        Schema::create('activities', function (Blueprint $table) {
+        Schema::connection('users')->create('activities', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->string('request_uri')->nullable();
             $table->timestamps();
+
+            // Constraints
+            $table->foreign('user_id')->references('id')->on('users.users');
         });
     }
 
@@ -26,6 +31,6 @@ class CreateActivitiesTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('activities');
+        Schema::connection('users')->dropIfExists('activities');
     }
 }

@@ -8,4 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 class Activity extends Model
 {
     use HasFactory;
+
+    /**
+     * Mass fillable
+     *
+     * @var array
+     */
+    public $fillable = ['request_uri'];
 }

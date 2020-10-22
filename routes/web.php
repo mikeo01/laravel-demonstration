@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers;
 use App\Http\Middleware\RedirectIfAuthenticated;
+use App\Http\Middleware\UserActivity;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,5 +27,7 @@ Route::middleware([RedirectIfAuthenticated::class])->group(function () {
 
 // Protected routes
 Route::middleware(['web', 'auth'])->group(function () {
-    Route::get('/home', fn () => view('app'))->name('home');
+    Route::middleware(UserActivity::class)->group(function () {
+        Route::get('/home', fn () => view('app'))->name('home');
+    });
 });
