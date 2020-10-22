@@ -15,7 +15,7 @@ class CatalogueController extends Controller
      */
     public function index()
     {
-        //
+        return Catalogue::all();
     }
 
     /**

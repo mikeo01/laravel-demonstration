@@ -1,8 +1,10 @@
 {
     "compilerOptions": {
         "target": "ES2015",
-        "jsxFactory": "React.createElement",
-        "module": "CommonJS"
+        "jsx": "react",
+        "jsxFactory": "Snabbdom.createElement",
+        "module": "CommonJS",
+        "esModuleInterop": true
     },
     "include": [
         "resources/ts/**.ts",

@@ -2669,6 +2669,188 @@ function isolateSink(request$, scope) {
 
 /***/ }),
 
+/***/ "./node_modules/@cycle/isolate/lib/es6/index.js":
+/*!******************************************************!*\
+  !*** ./node_modules/@cycle/isolate/lib/es6/index.js ***!
+  \******************************************************/
+/*! exports provided: default, toIsolated */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "toIsolated", function() { return toIsolated; });
+/* harmony import */ var xstream__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! xstream */ "./node_modules/xstream/index.js");
+/* harmony import */ var xstream__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(xstream__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _cycle_run_lib_adapt__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @cycle/run/lib/adapt */ "./node_modules/@cycle/run/lib/adapt.js");
+/* harmony import */ var _cycle_run_lib_adapt__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_cycle_run_lib_adapt__WEBPACK_IMPORTED_MODULE_1__);
+
+
+function checkIsolateArgs(dataflowComponent, scope) {
+    if (typeof dataflowComponent !== "function") {
+        throw new Error("First argument given to isolate() must be a " +
+            "'dataflowComponent' function");
+    }
+    if (scope === null) {
+        throw new Error("Second argument given to isolate() must not be null");
+    }
+}
+function normalizeScopes(sources, scopes, randomScope) {
+    var perChannel = {};
+    Object.keys(sources).forEach(function (channel) {
+        if (typeof scopes === 'string') {
+            perChannel[channel] = scopes;
+            return;
+        }
+        var candidate = scopes[channel];
+        if (typeof candidate !== 'undefined') {
+            perChannel[channel] = candidate;
+            return;
+        }
+        var wildcard = scopes['*'];
+        if (typeof wildcard !== 'undefined') {
+            perChannel[channel] = wildcard;
+            return;
+        }
+        perChannel[channel] = randomScope;
+    });
+    return perChannel;
+}
+function isolateAllSources(outerSources, scopes) {
+    var innerSources = {};
+    for (var channel in outerSources) {
+        var outerSource = outerSources[channel];
+        if (outerSources.hasOwnProperty(channel) &&
+            outerSource &&
+            scopes[channel] !== null &&
+            typeof outerSource.isolateSource === 'function') {
+            innerSources[channel] = outerSource.isolateSource(outerSource, scopes[channel]);
+        }
+        else if (outerSources.hasOwnProperty(channel)) {
+            innerSources[channel] = outerSources[channel];
+        }
+    }
+    return innerSources;
+}
+function isolateAllSinks(sources, innerSinks, scopes) {
+    var outerSinks = {};
+    for (var channel in innerSinks) {
+        var source = sources[channel];
+        var innerSink = innerSinks[channel];
+        if (innerSinks.hasOwnProperty(channel) &&
+            source &&
+            scopes[channel] !== null &&
+            typeof source.isolateSink === 'function') {
+            outerSinks[channel] = Object(_cycle_run_lib_adapt__WEBPACK_IMPORTED_MODULE_1__["adapt"])(source.isolateSink(xstream__WEBPACK_IMPORTED_MODULE_0___default.a.fromObservable(innerSink), scopes[channel]));
+        }
+        else if (innerSinks.hasOwnProperty(channel)) {
+            outerSinks[channel] = innerSinks[channel];
+        }
+    }
+    return outerSinks;
+}
+var counter = 0;
+function newScope() {
+    return "cycle" + ++counter;
+}
+/**
+ * Takes a `component` function and a `scope`, and returns an isolated version
+ * of the `component` function.
+ *
+ * When the isolated component is invoked, each source provided to it is
+ * isolated to the given `scope` using `source.isolateSource(source, scope)`,
+ * if possible. Likewise, the sinks returned from the isolated component are
+ * isolated to the given `scope` using `source.isolateSink(sink, scope)`.
+ *
+ * The `scope` can be a string or an object. If it is anything else than those
+ * two types, it will be converted to a string. If `scope` is an object, it
+ * represents "scopes per channel", allowing you to specify a different scope
+ * for each key of sources/sinks. For instance
+ *
+ * ```js
+ * const childSinks = isolate(Child, {DOM: 'foo', HTTP: 'bar'})(sources);
+ * ```
+ *
+ * You can also use a wildcard `'*'` to use as a default for source/sinks
+ * channels that did not receive a specific scope:
+ *
+ * ```js
+ * // Uses 'bar' as the isolation scope for HTTP and other channels
+ * const childSinks = isolate(Child, {DOM: 'foo', '*': 'bar'})(sources);
+ * ```
+ *
+ * If a channel's value is null, then that channel's sources and sinks won't be
+ * isolated. If the wildcard is null and some channels are unspecified, those
+ * channels won't be isolated. If you don't have a wildcard and some channels
+ * are unspecified, then `isolate` will generate a random scope.
+ *
+ * ```js
+ * // Does not isolate HTTP requests
+ * const childSinks = isolate(Child, {DOM: 'foo', HTTP: null})(sources);
+ * ```
+ *
+ * If the `scope` argument is not provided at all, a new scope will be
+ * automatically created. This means that while **`isolate(component, scope)` is
+ * pure** (referentially transparent), **`isolate(component)` is impure** (not
+ * referentially transparent). Two calls to `isolate(Foo, bar)` will generate
+ * the same component. But, two calls to `isolate(Foo)` will generate two
+ * distinct components.
+ *
+ * ```js
+ * // Uses some arbitrary string as the isolation scope for HTTP and other channels
+ * const childSinks = isolate(Child, {DOM: 'foo'})(sources);
+ * ```
+ *
+ * Note that both `isolateSource()` and `isolateSink()` are static members of
+ * `source`. The reason for this is that drivers produce `source` while the
+ * application produces `sink`, and it's the driver's responsibility to
+ * implement `isolateSource()` and `isolateSink()`.
+ *
+ * _Note for Typescript users:_ `isolate` is not currently type-transparent and
+ * will explicitly convert generic type arguments to `any`. To preserve types in
+ * your components, you can use a type assertion:
+ *
+ * ```ts
+ * // if Child is typed `Component<Sources, Sinks>`
+ * const isolatedChild = isolate( Child ) as Component<Sources, Sinks>;
+ * ```
+ *
+ * @param {Function} component a function that takes `sources` as input
+ * and outputs a collection of `sinks`.
+ * @param {String} scope an optional string that is used to isolate each
+ * `sources` and `sinks` when the returned scoped component is invoked.
+ * @return {Function} the scoped component function that, as the original
+ * `component` function, takes `sources` and returns `sinks`.
+ * @function isolate
+ */
+function isolate(component, scope) {
+    if (scope === void 0) { scope = newScope(); }
+    checkIsolateArgs(component, scope);
+    var randomScope = typeof scope === 'object' ? newScope() : '';
+    var scopes = typeof scope === 'string' || typeof scope === 'object'
+        ? scope
+        : scope.toString();
+    return function wrappedComponent(outerSources) {
+        var rest = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            rest[_i - 1] = arguments[_i];
+        }
+        var scopesPerChannel = normalizeScopes(outerSources, scopes, randomScope);
+        var innerSources = isolateAllSources(outerSources, scopesPerChannel);
+        var innerSinks = component.apply(void 0, [innerSources].concat(rest));
+        var outerSinks = isolateAllSinks(outerSources, innerSinks, scopesPerChannel);
+        return outerSinks;
+    };
+}
+isolate.reset = function () { return (counter = 0); };
+/* harmony default export */ __webpack_exports__["default"] = (isolate);
+function toIsolated(scope) {
+    if (scope === void 0) { scope = newScope(); }
+    return function (component) { return isolate(component, scope); };
+}
+//# sourceMappingURL=index.js.map
+
+/***/ }),
+
 /***/ "./node_modules/@cycle/run/lib/adapt.js":
 /*!**********************************************!*\
   !*** ./node_modules/@cycle/run/lib/adapt.js ***!
@@ -3024,6 +3206,705 @@ function isObjectEmpty(obj) {
     return Object.keys(obj).length === 0;
 }
 //# sourceMappingURL=internals.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@cycle/state/lib/es6/Collection.js":
+/*!*********************************************************!*\
+  !*** ./node_modules/@cycle/state/lib/es6/Collection.js ***!
+  \*********************************************************/
+/*! exports provided: Instances, makeCollection */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "Instances", function() { return Instances; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "makeCollection", function() { return makeCollection; });
+/* harmony import */ var xstream__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! xstream */ "./node_modules/xstream/index.js");
+/* harmony import */ var xstream__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(xstream__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _cycle_run_lib_adapt__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @cycle/run/lib/adapt */ "./node_modules/@cycle/run/lib/adapt.js");
+/* harmony import */ var _cycle_run_lib_adapt__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_cycle_run_lib_adapt__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _cycle_isolate__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @cycle/isolate */ "./node_modules/@cycle/isolate/lib/es6/index.js");
+/* harmony import */ var _pickMerge__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./pickMerge */ "./node_modules/@cycle/state/lib/es6/pickMerge.js");
+/* harmony import */ var _pickCombine__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./pickCombine */ "./node_modules/@cycle/state/lib/es6/pickCombine.js");
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+
+
+
+
+
+/**
+ * An object representing all instances in a collection of components. Has the
+ * methods pickCombine and pickMerge to get the combined sinks of all instances.
+ */
+var Instances = /** @class */ (function () {
+    function Instances(instances$) {
+        this._instances$ = instances$;
+    }
+    /**
+     * Like `merge` in xstream, this operator blends multiple streams together, but
+     * picks those streams from a collection of component instances.
+     *
+     * Use the `selector` string to pick a stream from the sinks object of each
+     * component instance, then pickMerge will merge all those picked streams.
+     *
+     * @param {String} selector a name of a channel in a sinks object belonging to
+     * each component in the collection of components.
+     * @return {Function} an operator to be used with xstream's `compose` method.
+     */
+    Instances.prototype.pickMerge = function (selector) {
+        return Object(_cycle_run_lib_adapt__WEBPACK_IMPORTED_MODULE_1__["adapt"])(this._instances$.compose(Object(_pickMerge__WEBPACK_IMPORTED_MODULE_3__["pickMerge"])(selector)));
+    };
+    /**
+     * Like `combine` in xstream, this operator combines multiple streams together,
+     * but picks those streams from a collection of component instances.
+     *
+     * Use the `selector` string to pick a stream from the sinks object of each
+     * component instance, then pickCombine will combine all those picked streams.
+     *
+     * @param {String} selector a name of a channel in a sinks object belonging to
+     * each component in the collection of components.
+     * @return {Function} an operator to be used with xstream's `compose` method.
+     */
+    Instances.prototype.pickCombine = function (selector) {
+        return Object(_cycle_run_lib_adapt__WEBPACK_IMPORTED_MODULE_1__["adapt"])(this._instances$.compose(Object(_pickCombine__WEBPACK_IMPORTED_MODULE_4__["pickCombine"])(selector)));
+    };
+    return Instances;
+}());
+
+function defaultItemScope(key) {
+    return { '*': null };
+}
+function instanceLens(itemKey, key) {
+    return {
+        get: function (arr) {
+            if (typeof arr === 'undefined') {
+                return void 0;
+            }
+            else {
+                for (var i = 0, n = arr.length; i < n; ++i) {
+                    if ("" + itemKey(arr[i], i) === key) {
+                        return arr[i];
+                    }
+                }
+                return void 0;
+            }
+        },
+        set: function (arr, item) {
+            if (typeof arr === 'undefined') {
+                return [item];
+            }
+            else if (typeof item === 'undefined') {
+                return arr.filter(function (s, i) { return "" + itemKey(s, i) !== key; });
+            }
+            else {
+                return arr.map(function (s, i) {
+                    if ("" + itemKey(s, i) === key) {
+                        return item;
+                    }
+                    else {
+                        return s;
+                    }
+                });
+            }
+        },
+    };
+}
+var identityLens = {
+    get: function (outer) { return outer; },
+    set: function (outer, inner) { return inner; },
+};
+function makeCollection(opts) {
+    return function collectionComponent(sources) {
+        var name = opts.channel || 'state';
+        var itemKey = opts.itemKey;
+        var itemScope = opts.itemScope || defaultItemScope;
+        var itemComp = opts.item;
+        var state$ = xstream__WEBPACK_IMPORTED_MODULE_0___default.a.fromObservable(sources[name].stream);
+        var instances$ = state$.fold(function (acc, nextState) {
+            var _a, _b, _c, _d;
+            var dict = acc.dict;
+            if (Array.isArray(nextState)) {
+                var nextInstArray = Array(nextState.length);
+                var nextKeys_1 = new Set();
+                // add
+                for (var i = 0, n = nextState.length; i < n; ++i) {
+                    var key = "" + (itemKey ? itemKey(nextState[i], i) : i);
+                    nextKeys_1.add(key);
+                    if (!dict.has(key)) {
+                        var stateScope = itemKey ? instanceLens(itemKey, key) : "" + i;
+                        var otherScopes = itemScope(key);
+                        var scopes = typeof otherScopes === 'string'
+                            ? (_a = { '*': otherScopes }, _a[name] = stateScope, _a) : __assign({}, otherScopes, (_b = {}, _b[name] = stateScope, _b));
+                        var sinks = Object(_cycle_isolate__WEBPACK_IMPORTED_MODULE_2__["default"])(itemComp, scopes)(sources);
+                        dict.set(key, sinks);
+                        nextInstArray[i] = sinks;
+                    }
+                    else {
+                        nextInstArray[i] = dict.get(key);
+                    }
+                    nextInstArray[i]._key = key;
+                }
+                // remove
+                dict.forEach(function (_, key) {
+                    if (!nextKeys_1.has(key)) {
+                        dict.delete(key);
+                    }
+                });
+                nextKeys_1.clear();
+                return { dict: dict, arr: nextInstArray };
+            }
+            else {
+                dict.clear();
+                var key = "" + (itemKey ? itemKey(nextState, 0) : 'this');
+                var stateScope = identityLens;
+                var otherScopes = itemScope(key);
+                var scopes = typeof otherScopes === 'string'
+                    ? (_c = { '*': otherScopes }, _c[name] = stateScope, _c) : __assign({}, otherScopes, (_d = {}, _d[name] = stateScope, _d));
+                var sinks = Object(_cycle_isolate__WEBPACK_IMPORTED_MODULE_2__["default"])(itemComp, scopes)(sources);
+                dict.set(key, sinks);
+                return { dict: dict, arr: [sinks] };
+            }
+        }, { dict: new Map(), arr: [] });
+        return opts.collectSinks(new Instances(instances$));
+    };
+}
+//# sourceMappingURL=Collection.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@cycle/state/lib/es6/StateSource.js":
+/*!**********************************************************!*\
+  !*** ./node_modules/@cycle/state/lib/es6/StateSource.js ***!
+  \**********************************************************/
+/*! exports provided: isolateSource, isolateSink, StateSource */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "isolateSource", function() { return isolateSource; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "isolateSink", function() { return isolateSink; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "StateSource", function() { return StateSource; });
+/* harmony import */ var xstream_extra_dropRepeats__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! xstream/extra/dropRepeats */ "./node_modules/xstream/extra/dropRepeats.js");
+/* harmony import */ var xstream_extra_dropRepeats__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(xstream_extra_dropRepeats__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _cycle_run_lib_adapt__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @cycle/run/lib/adapt */ "./node_modules/@cycle/run/lib/adapt.js");
+/* harmony import */ var _cycle_run_lib_adapt__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_cycle_run_lib_adapt__WEBPACK_IMPORTED_MODULE_1__);
+var __assign = (undefined && undefined.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+
+
+function updateArrayEntry(array, scope, newVal) {
+    if (newVal === array[scope]) {
+        return array;
+    }
+    var index = parseInt(scope);
+    if (typeof newVal === 'undefined') {
+        return array.filter(function (_val, i) { return i !== index; });
+    }
+    return array.map(function (val, i) { return (i === index ? newVal : val); });
+}
+function makeGetter(scope) {
+    if (typeof scope === 'string' || typeof scope === 'number') {
+        return function lensGet(state) {
+            if (typeof state === 'undefined') {
+                return void 0;
+            }
+            else {
+                return state[scope];
+            }
+        };
+    }
+    else {
+        return scope.get;
+    }
+}
+function makeSetter(scope) {
+    if (typeof scope === 'string' || typeof scope === 'number') {
+        return function lensSet(state, childState) {
+            var _a, _b;
+            if (Array.isArray(state)) {
+                return updateArrayEntry(state, scope, childState);
+            }
+            else if (typeof state === 'undefined') {
+                return _a = {}, _a[scope] = childState, _a;
+            }
+            else {
+                return __assign({}, state, (_b = {}, _b[scope] = childState, _b));
+            }
+        };
+    }
+    else {
+        return scope.set;
+    }
+}
+function isolateSource(source, scope) {
+    return source.select(scope);
+}
+function isolateSink(innerReducer$, scope) {
+    var get = makeGetter(scope);
+    var set = makeSetter(scope);
+    return innerReducer$.map(function (innerReducer) {
+        return function outerReducer(outer) {
+            var prevInner = get(outer);
+            var nextInner = innerReducer(prevInner);
+            if (prevInner === nextInner) {
+                return outer;
+            }
+            else {
+                return set(outer, nextInner);
+            }
+        };
+    });
+}
+/**
+ * Represents a piece of application state dynamically changing over time.
+ */
+var StateSource = /** @class */ (function () {
+    function StateSource(stream, name) {
+        this.isolateSource = isolateSource;
+        this.isolateSink = isolateSink;
+        this._stream = stream
+            .filter(function (s) { return typeof s !== 'undefined'; })
+            .compose(xstream_extra_dropRepeats__WEBPACK_IMPORTED_MODULE_0___default()())
+            .remember();
+        this._name = name;
+        this.stream = Object(_cycle_run_lib_adapt__WEBPACK_IMPORTED_MODULE_1__["adapt"])(this._stream);
+        this._stream._isCycleSource = name;
+    }
+    /**
+     * Selects a part (or scope) of the state object and returns a new StateSource
+     * dynamically representing that selected part of the state.
+     *
+     * @param {string|number|lens} scope as a string, this argument represents the
+     * property you want to select from the state object. As a number, this
+     * represents the array index you want to select from the state array. As a
+     * lens object (an object with get() and set()), this argument represents any
+     * custom way of selecting something from the state object.
+     */
+    StateSource.prototype.select = function (scope) {
+        var get = makeGetter(scope);
+        return new StateSource(this._stream.map(get), this._name);
+    };
+    return StateSource;
+}());
+
+//# sourceMappingURL=StateSource.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@cycle/state/lib/es6/index.js":
+/*!****************************************************!*\
+  !*** ./node_modules/@cycle/state/lib/es6/index.js ***!
+  \****************************************************/
+/*! exports provided: StateSource, isolateSource, isolateSink, Instances, withState, makeCollection */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _StateSource__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./StateSource */ "./node_modules/@cycle/state/lib/es6/StateSource.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "StateSource", function() { return _StateSource__WEBPACK_IMPORTED_MODULE_0__["StateSource"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "isolateSource", function() { return _StateSource__WEBPACK_IMPORTED_MODULE_0__["isolateSource"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "isolateSink", function() { return _StateSource__WEBPACK_IMPORTED_MODULE_0__["isolateSink"]; });
+
+/* harmony import */ var _Collection__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Collection */ "./node_modules/@cycle/state/lib/es6/Collection.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "Instances", function() { return _Collection__WEBPACK_IMPORTED_MODULE_1__["Instances"]; });
+
+/* harmony import */ var _withState__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./withState */ "./node_modules/@cycle/state/lib/es6/withState.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "withState", function() { return _withState__WEBPACK_IMPORTED_MODULE_2__["withState"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "makeCollection", function() { return _Collection__WEBPACK_IMPORTED_MODULE_1__["makeCollection"]; });
+
+
+
+/**
+ * Given a Cycle.js component that expects a state *source* and will
+ * output a reducer *sink*, this function sets up the state management
+ * mechanics to accumulate state over time and provide the state source. It
+ * returns a Cycle.js component which wraps the component given as input.
+ * Essentially, it hooks up the reducers sink with the state source as a cycle.
+ *
+ * Optionally, you can pass a custom name for the state channel. By default,
+ * the name is 'state' in sources and sinks, but you can change that to be
+ * whatever string you wish.
+ *
+ * @param {Function} main a function that takes `sources` as input and outputs
+ * `sinks`.
+ * @param {String} name an optional string for the custom name given to the
+ * state channel. By default, it is the string 'state'.
+ * @return {Function} a component that wraps the main function given as input,
+ * adding state accumulation logic to it.
+ * @function withState
+ */
+
+/**
+ * Returns a Cycle.js component (a function from sources to sinks) that
+ * represents a collection of many item components of the same type.
+ *
+ * Takes an "options" object as input, with the required properties:
+ * - item
+ * - collectSinks
+ *
+ * And the optional properties:
+ * - itemKey
+ * - itemScope
+ * - channel
+ *
+ * The returned component, the Collection, will use the state source passed to
+ * it (through sources) to guide the dynamic growing/shrinking of instances of
+ * the item component.
+ *
+ * Typically the state source should emit arrays, where each entry in the array
+ * is an object holding the state for each item component. When the state array
+ * grows, the collection will automatically instantiate a new item component.
+ * Similarly, when the state array gets smaller, the collection will handle
+ * removal of the corresponding item instance.
+ * @param {Object} opts a configuration object with the following fields:
+ *   - `item: function`, a Cycle.js component for each item in the collection.
+ *   - `collectSinks: function`, a function that describes how to collect the
+ *      sinks from all item instances.
+ *   - `itemKey: function`, a function from item state to item (unique) key.
+ *   - `itemScope: function`, a function from item key to isolation scope.
+ *   - `channel: string`, choose the channel name where the StateSource exists.
+ * @return {Function} a component that displays many instances of the item
+ * component.
+ * @function makeCollection
+ */
+
+//# sourceMappingURL=index.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@cycle/state/lib/es6/pickCombine.js":
+/*!**********************************************************!*\
+  !*** ./node_modules/@cycle/state/lib/es6/pickCombine.js ***!
+  \**********************************************************/
+/*! exports provided: pickCombine */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "pickCombine", function() { return pickCombine; });
+/* harmony import */ var xstream__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! xstream */ "./node_modules/xstream/index.js");
+/* harmony import */ var xstream__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(xstream__WEBPACK_IMPORTED_MODULE_0__);
+
+var PickCombineListener = /** @class */ (function () {
+    function PickCombineListener(key, out, p, ins) {
+        this.key = key;
+        this.out = out;
+        this.p = p;
+        this.val = xstream__WEBPACK_IMPORTED_MODULE_0__["NO"];
+        this.ins = ins;
+    }
+    PickCombineListener.prototype._n = function (t) {
+        var p = this.p, out = this.out;
+        this.val = t;
+        if (out === null) {
+            return;
+        }
+        this.p.up();
+    };
+    PickCombineListener.prototype._e = function (err) {
+        var out = this.out;
+        if (out === null) {
+            return;
+        }
+        out._e(err);
+    };
+    PickCombineListener.prototype._c = function () { };
+    return PickCombineListener;
+}());
+var PickCombine = /** @class */ (function () {
+    function PickCombine(sel, ins) {
+        this.type = 'combine';
+        this.ins = ins;
+        this.sel = sel;
+        this.out = null;
+        this.ils = new Map();
+        this.inst = null;
+    }
+    PickCombine.prototype._start = function (out) {
+        this.out = out;
+        this.ins._add(this);
+    };
+    PickCombine.prototype._stop = function () {
+        this.ins._remove(this);
+        var ils = this.ils;
+        ils.forEach(function (il) {
+            il.ins._remove(il);
+            il.ins = null;
+            il.out = null;
+            il.val = null;
+        });
+        ils.clear();
+        this.out = null;
+        this.ils = new Map();
+        this.inst = null;
+    };
+    PickCombine.prototype.up = function () {
+        var arr = this.inst.arr;
+        var n = arr.length;
+        var ils = this.ils;
+        var outArr = Array(n);
+        for (var i = 0; i < n; ++i) {
+            var sinks = arr[i];
+            var key = sinks._key;
+            if (!ils.has(key)) {
+                return;
+            }
+            var val = ils.get(key).val;
+            if (val === xstream__WEBPACK_IMPORTED_MODULE_0__["NO"]) {
+                return;
+            }
+            outArr[i] = val;
+        }
+        this.out._n(outArr);
+    };
+    PickCombine.prototype._n = function (inst) {
+        this.inst = inst;
+        var arrSinks = inst.arr;
+        var ils = this.ils;
+        var out = this.out;
+        var sel = this.sel;
+        var dict = inst.dict;
+        var n = arrSinks.length;
+        // remove
+        var removed = false;
+        ils.forEach(function (il, key) {
+            if (!dict.has(key)) {
+                il.ins._remove(il);
+                il.ins = null;
+                il.out = null;
+                il.val = null;
+                ils.delete(key);
+                removed = true;
+            }
+        });
+        if (n === 0) {
+            out._n([]);
+            return;
+        }
+        // add
+        for (var i = 0; i < n; ++i) {
+            var sinks = arrSinks[i];
+            var key = sinks._key;
+            if (!sinks[sel]) {
+                throw new Error('pickCombine found an undefined child sink stream');
+            }
+            var sink = xstream__WEBPACK_IMPORTED_MODULE_0___default.a.fromObservable(sinks[sel]);
+            if (!ils.has(key)) {
+                ils.set(key, new PickCombineListener(key, out, this, sink));
+                sink._add(ils.get(key));
+            }
+        }
+        if (removed) {
+            this.up();
+        }
+    };
+    PickCombine.prototype._e = function (e) {
+        var out = this.out;
+        if (out === null) {
+            return;
+        }
+        out._e(e);
+    };
+    PickCombine.prototype._c = function () {
+        var out = this.out;
+        if (out === null) {
+            return;
+        }
+        out._c();
+    };
+    return PickCombine;
+}());
+function pickCombine(selector) {
+    return function pickCombineOperator(inst$) {
+        return new xstream__WEBPACK_IMPORTED_MODULE_0__["Stream"](new PickCombine(selector, inst$));
+    };
+}
+//# sourceMappingURL=pickCombine.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@cycle/state/lib/es6/pickMerge.js":
+/*!********************************************************!*\
+  !*** ./node_modules/@cycle/state/lib/es6/pickMerge.js ***!
+  \********************************************************/
+/*! exports provided: pickMerge */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "pickMerge", function() { return pickMerge; });
+/* harmony import */ var xstream__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! xstream */ "./node_modules/xstream/index.js");
+/* harmony import */ var xstream__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(xstream__WEBPACK_IMPORTED_MODULE_0__);
+
+var PickMergeListener = /** @class */ (function () {
+    function PickMergeListener(out, p, ins) {
+        this.ins = ins;
+        this.out = out;
+        this.p = p;
+    }
+    PickMergeListener.prototype._n = function (t) {
+        var p = this.p, out = this.out;
+        if (out === null) {
+            return;
+        }
+        out._n(t);
+    };
+    PickMergeListener.prototype._e = function (err) {
+        var out = this.out;
+        if (out === null) {
+            return;
+        }
+        out._e(err);
+    };
+    PickMergeListener.prototype._c = function () { };
+    return PickMergeListener;
+}());
+var PickMerge = /** @class */ (function () {
+    function PickMerge(sel, ins) {
+        this.type = 'pickMerge';
+        this.ins = ins;
+        this.out = null;
+        this.sel = sel;
+        this.ils = new Map();
+        this.inst = null;
+    }
+    PickMerge.prototype._start = function (out) {
+        this.out = out;
+        this.ins._add(this);
+    };
+    PickMerge.prototype._stop = function () {
+        this.ins._remove(this);
+        var ils = this.ils;
+        ils.forEach(function (il, key) {
+            il.ins._remove(il);
+            il.ins = null;
+            il.out = null;
+            ils.delete(key);
+        });
+        ils.clear();
+        this.out = null;
+        this.ils = new Map();
+        this.inst = null;
+    };
+    PickMerge.prototype._n = function (inst) {
+        this.inst = inst;
+        var arrSinks = inst.arr;
+        var ils = this.ils;
+        var out = this.out;
+        var sel = this.sel;
+        var n = arrSinks.length;
+        // add
+        for (var i = 0; i < n; ++i) {
+            var sinks = arrSinks[i];
+            var key = sinks._key;
+            var sink = xstream__WEBPACK_IMPORTED_MODULE_0___default.a.fromObservable(sinks[sel] || xstream__WEBPACK_IMPORTED_MODULE_0___default.a.never());
+            if (!ils.has(key)) {
+                ils.set(key, new PickMergeListener(out, this, sink));
+                sink._add(ils.get(key));
+            }
+        }
+        // remove
+        ils.forEach(function (il, key) {
+            if (!inst.dict.has(key) || !inst.dict.get(key)) {
+                il.ins._remove(il);
+                il.ins = null;
+                il.out = null;
+                ils.delete(key);
+            }
+        });
+    };
+    PickMerge.prototype._e = function (err) {
+        var u = this.out;
+        if (u === null) {
+            return;
+        }
+        u._e(err);
+    };
+    PickMerge.prototype._c = function () {
+        var u = this.out;
+        if (u === null) {
+            return;
+        }
+        u._c();
+    };
+    return PickMerge;
+}());
+function pickMerge(selector) {
+    return function pickMergeOperator(inst$) {
+        return new xstream__WEBPACK_IMPORTED_MODULE_0__["Stream"](new PickMerge(selector, inst$));
+    };
+}
+//# sourceMappingURL=pickMerge.js.map
+
+/***/ }),
+
+/***/ "./node_modules/@cycle/state/lib/es6/withState.js":
+/*!********************************************************!*\
+  !*** ./node_modules/@cycle/state/lib/es6/withState.js ***!
+  \********************************************************/
+/*! exports provided: withState */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "withState", function() { return withState; });
+/* harmony import */ var xstream__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! xstream */ "./node_modules/xstream/index.js");
+/* harmony import */ var xstream__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(xstream__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var xstream_extra_concat__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! xstream/extra/concat */ "./node_modules/xstream/extra/concat.js");
+/* harmony import */ var xstream_extra_concat__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(xstream_extra_concat__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _StateSource__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./StateSource */ "./node_modules/@cycle/state/lib/es6/StateSource.js");
+/* harmony import */ var quicktask__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! quicktask */ "./node_modules/quicktask/index.js");
+/* harmony import */ var quicktask__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(quicktask__WEBPACK_IMPORTED_MODULE_3__);
+
+
+
+
+var schedule = quicktask__WEBPACK_IMPORTED_MODULE_3___default()();
+function withState(main, name) {
+    if (name === void 0) { name = 'state'; }
+    return function mainWithState(sources) {
+        var reducerMimic$ = xstream__WEBPACK_IMPORTED_MODULE_0___default.a.create();
+        var state$ = reducerMimic$
+            .fold(function (state, reducer) { return reducer(state); }, void 0)
+            .drop(1);
+        var innerSources = sources;
+        innerSources[name] = new _StateSource__WEBPACK_IMPORTED_MODULE_2__["StateSource"](state$, name);
+        var sinks = main(innerSources);
+        if (sinks[name]) {
+            var stream$ = xstream_extra_concat__WEBPACK_IMPORTED_MODULE_1___default()(xstream__WEBPACK_IMPORTED_MODULE_0___default.a.fromObservable(sinks[name]), xstream__WEBPACK_IMPORTED_MODULE_0___default.a.never());
+            stream$.subscribe({
+                next: function (i) { return schedule(function () { return reducerMimic$._n(i); }); },
+                error: function (err) { return schedule(function () { return reducerMimic$._e(err); }); },
+                complete: function () { return schedule(function () { return reducerMimic$._c(); }); },
+            });
+        }
+        return sinks;
+    };
+}
+//# sourceMappingURL=withState.js.map
 
 /***/ }),
 
@@ -8367,6 +9248,241 @@ exports.default = concat;
 
 /***/ }),
 
+/***/ "./node_modules/xstream/extra/delay.js":
+/*!*********************************************!*\
+  !*** ./node_modules/xstream/extra/delay.js ***!
+  \*********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var index_1 = __webpack_require__(/*! ../index */ "./node_modules/xstream/index.js");
+var DelayOperator = /** @class */ (function () {
+    function DelayOperator(dt, ins) {
+        this.dt = dt;
+        this.ins = ins;
+        this.type = 'delay';
+        this.out = null;
+    }
+    DelayOperator.prototype._start = function (out) {
+        this.out = out;
+        this.ins._add(this);
+    };
+    DelayOperator.prototype._stop = function () {
+        this.ins._remove(this);
+        this.out = null;
+    };
+    DelayOperator.prototype._n = function (t) {
+        var u = this.out;
+        if (!u)
+            return;
+        var id = setInterval(function () {
+            u._n(t);
+            clearInterval(id);
+        }, this.dt);
+    };
+    DelayOperator.prototype._e = function (err) {
+        var u = this.out;
+        if (!u)
+            return;
+        var id = setInterval(function () {
+            u._e(err);
+            clearInterval(id);
+        }, this.dt);
+    };
+    DelayOperator.prototype._c = function () {
+        var u = this.out;
+        if (!u)
+            return;
+        var id = setInterval(function () {
+            u._c();
+            clearInterval(id);
+        }, this.dt);
+    };
+    return DelayOperator;
+}());
+/**
+ * Delays periodic events by a given time period.
+ *
+ * Marble diagram:
+ *
+ * ```text
+ * 1----2--3--4----5|
+ *     delay(60)
+ * ---1----2--3--4----5|
+ * ```
+ *
+ * Example:
+ *
+ * ```js
+ * import fromDiagram from 'xstream/extra/fromDiagram'
+ * import delay from 'xstream/extra/delay'
+ *
+ * const stream = fromDiagram('1----2--3--4----5|')
+ *  .compose(delay(60))
+ *
+ * stream.addListener({
+ *   next: i => console.log(i),
+ *   error: err => console.error(err),
+ *   complete: () => console.log('completed')
+ * })
+ * ```
+ *
+ * ```text
+ * > 1  (after 60 ms)
+ * > 2  (after 160 ms)
+ * > 3  (after 220 ms)
+ * > 4  (after 280 ms)
+ * > 5  (after 380 ms)
+ * > completed
+ * ```
+ *
+ * @param {number} period The amount of silence required in milliseconds.
+ * @return {Stream}
+ */
+function delay(period) {
+    return function delayOperator(ins) {
+        return new index_1.Stream(new DelayOperator(period, ins));
+    };
+}
+exports.default = delay;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiZGVsYXkuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi9zcmMvZXh0cmEvZGVsYXkudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7QUFBQSxrQ0FBMEM7QUFFMUM7SUFJRSx1QkFBbUIsRUFBVSxFQUNWLEdBQWM7UUFEZCxPQUFFLEdBQUYsRUFBRSxDQUFRO1FBQ1YsUUFBRyxHQUFILEdBQUcsQ0FBVztRQUoxQixTQUFJLEdBQUcsT0FBTyxDQUFDO1FBQ2YsUUFBRyxHQUFjLElBQVcsQ0FBQztJQUlwQyxDQUFDO0lBRUQsOEJBQU0sR0FBTixVQUFPLEdBQWM7UUFDbkIsSUFBSSxDQUFDLEdBQUcsR0FBRyxHQUFHLENBQUM7UUFDZixJQUFJLENBQUMsR0FBRyxDQUFDLElBQUksQ0FBQyxJQUFJLENBQUMsQ0FBQztJQUN0QixDQUFDO0lBRUQsNkJBQUssR0FBTDtRQUNFLElBQUksQ0FBQyxHQUFHLENBQUMsT0FBTyxDQUFDLElBQUksQ0FBQyxDQUFDO1FBQ3ZCLElBQUksQ0FBQyxHQUFHLEdBQUcsSUFBVyxDQUFDO0lBQ3pCLENBQUM7SUFFRCwwQkFBRSxHQUFGLFVBQUcsQ0FBSTtRQUNMLElBQU0sQ0FBQyxHQUFHLElBQUksQ0FBQyxHQUFHLENBQUM7UUFDbkIsSUFBSSxDQUFDLENBQUM7WUFBRSxPQUFPO1FBQ2YsSUFBTSxFQUFFLEdBQUcsV0FBVyxDQUFDO1lBQ3JCLENBQUMsQ0FBQyxFQUFFLENBQUMsQ0FBQyxDQUFDLENBQUM7WUFDUixhQUFhLENBQUMsRUFBRSxDQUFDLENBQUM7UUFDcEIsQ0FBQyxFQUFFLElBQUksQ0FBQyxFQUFFLENBQUMsQ0FBQztJQUNkLENBQUM7SUFFRCwwQkFBRSxHQUFGLFVBQUcsR0FBUTtRQUNULElBQU0sQ0FBQyxHQUFHLElBQUksQ0FBQyxHQUFHLENBQUM7UUFDbkIsSUFBSSxDQUFDLENBQUM7WUFBRSxPQUFPO1FBQ2YsSUFBTSxFQUFFLEdBQUcsV0FBVyxDQUFDO1lBQ3JCLENBQUMsQ0FBQyxFQUFFLENBQUMsR0FBRyxDQUFDLENBQUM7WUFDVixhQUFhLENBQUMsRUFBRSxDQUFDLENBQUM7UUFDcEIsQ0FBQyxFQUFFLElBQUksQ0FBQyxFQUFFLENBQUMsQ0FBQztJQUNkLENBQUM7SUFFRCwwQkFBRSxHQUFGO1FBQ0UsSUFBTSxDQUFDLEdBQUcsSUFBSSxDQUFDLEdBQUcsQ0FBQztRQUNuQixJQUFJLENBQUMsQ0FBQztZQUFFLE9BQU87UUFDZixJQUFNLEVBQUUsR0FBRyxXQUFXLENBQUM7WUFDckIsQ0FBQyxDQUFDLEVBQUUsRUFBRSxDQUFDO1lBQ1AsYUFBYSxDQUFDLEVBQUUsQ0FBQyxDQUFDO1FBQ3BCLENBQUMsRUFBRSxJQUFJLENBQUMsRUFBRSxDQUFDLENBQUM7SUFDZCxDQUFDO0lBQ0gsb0JBQUM7QUFBRCxDQUFDLEFBNUNELElBNENDO0FBRUQ7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7O0dBc0NHO0FBQ0gsU0FBd0IsS0FBSyxDQUFJLE1BQWM7SUFDN0MsT0FBTyxTQUFTLGFBQWEsQ0FBQyxHQUFjO1FBQzFDLE9BQU8sSUFBSSxjQUFNLENBQUksSUFBSSxhQUFhLENBQUMsTUFBTSxFQUFFLEdBQUcsQ0FBQyxDQUFDLENBQUM7SUFDdkQsQ0FBQyxDQUFDO0FBQ0osQ0FBQztBQUpELHdCQUlDIiwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHtPcGVyYXRvciwgU3RyZWFtfSBmcm9tICcuLi9pbmRleCc7XG5cbmNsYXNzIERlbGF5T3BlcmF0b3I8VD4gaW1wbGVtZW50cyBPcGVyYXRvcjxULCBUPiB7XG4gIHB1YmxpYyB0eXBlID0gJ2RlbGF5JztcbiAgcHVibGljIG91dDogU3RyZWFtPFQ+ID0gbnVsbCBhcyBhbnk7XG5cbiAgY29uc3RydWN0b3IocHVibGljIGR0OiBudW1iZXIsXG4gICAgICAgICAgICAgIHB1YmxpYyBpbnM6IFN0cmVhbTxUPikge1xuICB9XG5cbiAgX3N0YXJ0KG91dDogU3RyZWFtPFQ+KTogdm9pZCB7XG4gICAgdGhpcy5vdXQgPSBvdXQ7XG4gICAgdGhpcy5pbnMuX2FkZCh0aGlzKTtcbiAgfVxuXG4gIF9zdG9wKCk6IHZvaWQge1xuICAgIHRoaXMuaW5zLl9yZW1vdmUodGhpcyk7XG4gICAgdGhpcy5vdXQgPSBudWxsIGFzIGFueTtcbiAgfVxuXG4gIF9uKHQ6IFQpIHtcbiAgICBjb25zdCB1ID0gdGhpcy5vdXQ7XG4gICAgaWYgKCF1KSByZXR1cm47XG4gICAgY29uc3QgaWQgPSBzZXRJbnRlcnZhbCgoKSA9PiB7XG4gICAgICB1Ll9uKHQpO1xuICAgICAgY2xlYXJJbnRlcnZhbChpZCk7XG4gICAgfSwgdGhpcy5kdCk7XG4gIH1cblxuICBfZShlcnI6IGFueSkge1xuICAgIGNvbnN0IHUgPSB0aGlzLm91dDtcbiAgICBpZiAoIXUpIHJldHVybjtcbiAgICBjb25zdCBpZCA9IHNldEludGVydmFsKCgpID0+IHtcbiAgICAgIHUuX2UoZXJyKTtcbiAgICAgIGNsZWFySW50ZXJ2YWwoaWQpO1xuICAgIH0sIHRoaXMuZHQpO1xuICB9XG5cbiAgX2MoKSB7XG4gICAgY29uc3QgdSA9IHRoaXMub3V0O1xuICAgIGlmICghdSkgcmV0dXJuO1xuICAgIGNvbnN0IGlkID0gc2V0SW50ZXJ2YWwoKCkgPT4ge1xuICAgICAgdS5fYygpO1xuICAgICAgY2xlYXJJbnRlcnZhbChpZCk7XG4gICAgfSwgdGhpcy5kdCk7XG4gIH1cbn1cblxuLyoqXG4gKiBEZWxheXMgcGVyaW9kaWMgZXZlbnRzIGJ5IGEgZ2l2ZW4gdGltZSBwZXJpb2QuXG4gKlxuICogTWFyYmxlIGRpYWdyYW06XG4gKlxuICogYGBgdGV4dFxuICogMS0tLS0yLS0zLS00LS0tLTV8XG4gKiAgICAgZGVsYXkoNjApXG4gKiAtLS0xLS0tLTItLTMtLTQtLS0tNXxcbiAqIGBgYFxuICpcbiAqIEV4YW1wbGU6XG4gKlxuICogYGBganNcbiAqIGltcG9ydCBmcm9tRGlhZ3JhbSBmcm9tICd4c3RyZWFtL2V4dHJhL2Zyb21EaWFncmFtJ1xuICogaW1wb3J0IGRlbGF5IGZyb20gJ3hzdHJlYW0vZXh0cmEvZGVsYXknXG4gKlxuICogY29uc3Qgc3RyZWFtID0gZnJvbURpYWdyYW0oJzEtLS0tMi0tMy0tNC0tLS01fCcpXG4gKiAgLmNvbXBvc2UoZGVsYXkoNjApKVxuICpcbiAqIHN0cmVhbS5hZGRMaXN0ZW5lcih7XG4gKiAgIG5leHQ6IGkgPT4gY29uc29sZS5sb2coaSksXG4gKiAgIGVycm9yOiBlcnIgPT4gY29uc29sZS5lcnJvcihlcnIpLFxuICogICBjb21wbGV0ZTogKCkgPT4gY29uc29sZS5sb2coJ2NvbXBsZXRlZCcpXG4gKiB9KVxuICogYGBgXG4gKlxuICogYGBgdGV4dFxuICogPiAxICAoYWZ0ZXIgNjAgbXMpXG4gKiA+IDIgIChhZnRlciAxNjAgbXMpXG4gKiA+IDMgIChhZnRlciAyMjAgbXMpXG4gKiA+IDQgIChhZnRlciAyODAgbXMpXG4gKiA+IDUgIChhZnRlciAzODAgbXMpXG4gKiA+IGNvbXBsZXRlZFxuICogYGBgXG4gKlxuICogQHBhcmFtIHtudW1iZXJ9IHBlcmlvZCBUaGUgYW1vdW50IG9mIHNpbGVuY2UgcmVxdWlyZWQgaW4gbWlsbGlzZWNvbmRzLlxuICogQHJldHVybiB7U3RyZWFtfVxuICovXG5leHBvcnQgZGVmYXVsdCBmdW5jdGlvbiBkZWxheTxUPihwZXJpb2Q6IG51bWJlcik6IChpbnM6IFN0cmVhbTxUPikgPT4gU3RyZWFtPFQ+IHtcbiAgcmV0dXJuIGZ1bmN0aW9uIGRlbGF5T3BlcmF0b3IoaW5zOiBTdHJlYW08VD4pOiBTdHJlYW08VD4ge1xuICAgIHJldHVybiBuZXcgU3RyZWFtPFQ+KG5ldyBEZWxheU9wZXJhdG9yKHBlcmlvZCwgaW5zKSk7XG4gIH07XG59XG4iXX0=
+
+/***/ }),
+
+/***/ "./node_modules/xstream/extra/dropRepeats.js":
+/*!***************************************************!*\
+  !*** ./node_modules/xstream/extra/dropRepeats.js ***!
+  \***************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DropRepeatsOperator = void 0;
+var index_1 = __webpack_require__(/*! ../index */ "./node_modules/xstream/index.js");
+var empty = {};
+var DropRepeatsOperator = /** @class */ (function () {
+    function DropRepeatsOperator(ins, fn) {
+        this.ins = ins;
+        this.type = 'dropRepeats';
+        this.out = null;
+        this.v = empty;
+        this.isEq = fn ? fn : function (x, y) { return x === y; };
+    }
+    DropRepeatsOperator.prototype._start = function (out) {
+        this.out = out;
+        this.ins._add(this);
+    };
+    DropRepeatsOperator.prototype._stop = function () {
+        this.ins._remove(this);
+        this.out = null;
+        this.v = empty;
+    };
+    DropRepeatsOperator.prototype._n = function (t) {
+        var u = this.out;
+        if (!u)
+            return;
+        var v = this.v;
+        if (v !== empty && this.isEq(t, v))
+            return;
+        this.v = t;
+        u._n(t);
+    };
+    DropRepeatsOperator.prototype._e = function (err) {
+        var u = this.out;
+        if (!u)
+            return;
+        u._e(err);
+    };
+    DropRepeatsOperator.prototype._c = function () {
+        var u = this.out;
+        if (!u)
+            return;
+        u._c();
+    };
+    return DropRepeatsOperator;
+}());
+exports.DropRepeatsOperator = DropRepeatsOperator;
+/**
+ * Drops consecutive duplicate values in a stream.
+ *
+ * Marble diagram:
+ *
+ * ```text
+ * --1--2--1--1--1--2--3--4--3--3|
+ *     dropRepeats
+ * --1--2--1--------2--3--4--3---|
+ * ```
+ *
+ * Example:
+ *
+ * ```js
+ * import dropRepeats from 'xstream/extra/dropRepeats'
+ *
+ * const stream = xs.of(1, 2, 1, 1, 1, 2, 3, 4, 3, 3)
+ *   .compose(dropRepeats())
+ *
+ * stream.addListener({
+ *   next: i => console.log(i),
+ *   error: err => console.error(err),
+ *   complete: () => console.log('completed')
+ * })
+ * ```
+ *
+ * ```text
+ * > 1
+ * > 2
+ * > 1
+ * > 2
+ * > 3
+ * > 4
+ * > 3
+ * > completed
+ * ```
+ *
+ * Example with a custom isEqual function:
+ *
+ * ```js
+ * import dropRepeats from 'xstream/extra/dropRepeats'
+ *
+ * const stream = xs.of('a', 'b', 'a', 'A', 'B', 'b')
+ *   .compose(dropRepeats((x, y) => x.toLowerCase() === y.toLowerCase()))
+ *
+ * stream.addListener({
+ *   next: i => console.log(i),
+ *   error: err => console.error(err),
+ *   complete: () => console.log('completed')
+ * })
+ * ```
+ *
+ * ```text
+ * > a
+ * > b
+ * > a
+ * > B
+ * > completed
+ * ```
+ *
+ * @param {Function} isEqual An optional function of type
+ * `(x: T, y: T) => boolean` that takes an event from the input stream and
+ * checks if it is equal to previous event, by returning a boolean.
+ * @return {Stream}
+ */
+function dropRepeats(isEqual) {
+    if (isEqual === void 0) { isEqual = void 0; }
+    return function dropRepeatsOperator(ins) {
+        return new index_1.Stream(new DropRepeatsOperator(ins, isEqual));
+    };
+}
+exports.default = dropRepeats;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiZHJvcFJlcGVhdHMuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi9zcmMvZXh0cmEvZHJvcFJlcGVhdHMudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7O0FBQUEsa0NBQTBDO0FBQzFDLElBQU0sS0FBSyxHQUFHLEVBQUUsQ0FBQztBQUVqQjtJQU1FLDZCQUFtQixHQUFjLEVBQ3JCLEVBQXlDO1FBRGxDLFFBQUcsR0FBSCxHQUFHLENBQVc7UUFMMUIsU0FBSSxHQUFHLGFBQWEsQ0FBQztRQUNyQixRQUFHLEdBQWMsSUFBVyxDQUFDO1FBRTVCLE1BQUMsR0FBWSxLQUFLLENBQUM7UUFJekIsSUFBSSxDQUFDLElBQUksR0FBRyxFQUFFLENBQUMsQ0FBQyxDQUFDLEVBQUUsQ0FBQyxDQUFDLENBQUMsVUFBQyxDQUFDLEVBQUUsQ0FBQyxJQUFLLE9BQUEsQ0FBQyxLQUFLLENBQUMsRUFBUCxDQUFPLENBQUM7SUFDMUMsQ0FBQztJQUVELG9DQUFNLEdBQU4sVUFBTyxHQUFjO1FBQ25CLElBQUksQ0FBQyxHQUFHLEdBQUcsR0FBRyxDQUFDO1FBQ2YsSUFBSSxDQUFDLEdBQUcsQ0FBQyxJQUFJLENBQUMsSUFBSSxDQUFDLENBQUM7SUFDdEIsQ0FBQztJQUVELG1DQUFLLEdBQUw7UUFDRSxJQUFJLENBQUMsR0FBRyxDQUFDLE9BQU8sQ0FBQyxJQUFJLENBQUMsQ0FBQztRQUN2QixJQUFJLENBQUMsR0FBRyxHQUFHLElBQVcsQ0FBQztRQUN2QixJQUFJLENBQUMsQ0FBQyxHQUFHLEtBQVksQ0FBQztJQUN4QixDQUFDO0lBRUQsZ0NBQUUsR0FBRixVQUFHLENBQUk7UUFDTCxJQUFNLENBQUMsR0FBRyxJQUFJLENBQUMsR0FBRyxDQUFDO1FBQ25CLElBQUksQ0FBQyxDQUFDO1lBQUUsT0FBTztRQUNmLElBQU0sQ0FBQyxHQUFHLElBQUksQ0FBQyxDQUFDLENBQUM7UUFDakIsSUFBSSxDQUFDLEtBQUssS0FBSyxJQUFJLElBQUksQ0FBQyxJQUFJLENBQUMsQ0FBQyxFQUFFLENBQUMsQ0FBQztZQUFFLE9BQU87UUFDM0MsSUFBSSxDQUFDLENBQUMsR0FBRyxDQUFDLENBQUM7UUFDWCxDQUFDLENBQUMsRUFBRSxDQUFDLENBQUMsQ0FBQyxDQUFDO0lBQ1YsQ0FBQztJQUVELGdDQUFFLEdBQUYsVUFBRyxHQUFRO1FBQ1QsSUFBTSxDQUFDLEdBQUcsSUFBSSxDQUFDLEdBQUcsQ0FBQztRQUNuQixJQUFJLENBQUMsQ0FBQztZQUFFLE9BQU87UUFDZixDQUFDLENBQUMsRUFBRSxDQUFDLEdBQUcsQ0FBQyxDQUFDO0lBQ1osQ0FBQztJQUVELGdDQUFFLEdBQUY7UUFDRSxJQUFNLENBQUMsR0FBRyxJQUFJLENBQUMsR0FBRyxDQUFDO1FBQ25CLElBQUksQ0FBQyxDQUFDO1lBQUUsT0FBTztRQUNmLENBQUMsQ0FBQyxFQUFFLEVBQUUsQ0FBQztJQUNULENBQUM7SUFDSCwwQkFBQztBQUFELENBQUMsQUExQ0QsSUEwQ0M7QUExQ1ksa0RBQW1CO0FBNENoQzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7OztHQWdFRztBQUNILFNBQXdCLFdBQVcsQ0FBSSxPQUF1RDtJQUF2RCx3QkFBQSxFQUFBLGVBQXNELENBQUM7SUFDNUYsT0FBTyxTQUFTLG1CQUFtQixDQUFDLEdBQWM7UUFDaEQsT0FBTyxJQUFJLGNBQU0sQ0FBSSxJQUFJLG1CQUFtQixDQUFJLEdBQUcsRUFBRSxPQUFPLENBQUMsQ0FBQyxDQUFDO0lBQ2pFLENBQUMsQ0FBQztBQUNKLENBQUM7QUFKRCw4QkFJQyIsInNvdXJjZXNDb250ZW50IjpbImltcG9ydCB7T3BlcmF0b3IsIFN0cmVhbX0gZnJvbSAnLi4vaW5kZXgnO1xuY29uc3QgZW1wdHkgPSB7fTtcblxuZXhwb3J0IGNsYXNzIERyb3BSZXBlYXRzT3BlcmF0b3I8VD4gaW1wbGVtZW50cyBPcGVyYXRvcjxULCBUPiB7XG4gIHB1YmxpYyB0eXBlID0gJ2Ryb3BSZXBlYXRzJztcbiAgcHVibGljIG91dDogU3RyZWFtPFQ+ID0gbnVsbCBhcyBhbnk7XG4gIHB1YmxpYyBpc0VxOiAoeDogVCwgeTogVCkgPT4gYm9vbGVhbjtcbiAgcHJpdmF0ZSB2OiBUID0gPGFueT4gZW1wdHk7XG5cbiAgY29uc3RydWN0b3IocHVibGljIGluczogU3RyZWFtPFQ+LFxuICAgICAgICAgICAgICBmbjogKCh4OiBULCB5OiBUKSA9PiBib29sZWFuKSB8IHVuZGVmaW5lZCkge1xuICAgIHRoaXMuaXNFcSA9IGZuID8gZm4gOiAoeCwgeSkgPT4geCA9PT0geTtcbiAgfVxuXG4gIF9zdGFydChvdXQ6IFN0cmVhbTxUPik6IHZvaWQge1xuICAgIHRoaXMub3V0ID0gb3V0O1xuICAgIHRoaXMuaW5zLl9hZGQodGhpcyk7XG4gIH1cblxuICBfc3RvcCgpOiB2b2lkIHtcbiAgICB0aGlzLmlucy5fcmVtb3ZlKHRoaXMpO1xuICAgIHRoaXMub3V0ID0gbnVsbCBhcyBhbnk7XG4gICAgdGhpcy52ID0gZW1wdHkgYXMgYW55O1xuICB9XG5cbiAgX24odDogVCkge1xuICAgIGNvbnN0IHUgPSB0aGlzLm91dDtcbiAgICBpZiAoIXUpIHJldHVybjtcbiAgICBjb25zdCB2ID0gdGhpcy52O1xuICAgIGlmICh2ICE9PSBlbXB0eSAmJiB0aGlzLmlzRXEodCwgdikpIHJldHVybjtcbiAgICB0aGlzLnYgPSB0O1xuICAgIHUuX24odCk7XG4gIH1cblxuICBfZShlcnI6IGFueSkge1xuICAgIGNvbnN0IHUgPSB0aGlzLm91dDtcbiAgICBpZiAoIXUpIHJldHVybjtcbiAgICB1Ll9lKGVycik7XG4gIH1cblxuICBfYygpIHtcbiAgICBjb25zdCB1ID0gdGhpcy5vdXQ7XG4gICAgaWYgKCF1KSByZXR1cm47XG4gICAgdS5fYygpO1xuICB9XG59XG5cbi8qKlxuICogRHJvcHMgY29uc2VjdXRpdmUgZHVwbGljYXRlIHZhbHVlcyBpbiBhIHN0cmVhbS5cbiAqXG4gKiBNYXJibGUgZGlhZ3JhbTpcbiAqXG4gKiBgYGB0ZXh0XG4gKiAtLTEtLTItLTEtLTEtLTEtLTItLTMtLTQtLTMtLTN8XG4gKiAgICAgZHJvcFJlcGVhdHNcbiAqIC0tMS0tMi0tMS0tLS0tLS0tMi0tMy0tNC0tMy0tLXxcbiAqIGBgYFxuICpcbiAqIEV4YW1wbGU6XG4gKlxuICogYGBganNcbiAqIGltcG9ydCBkcm9wUmVwZWF0cyBmcm9tICd4c3RyZWFtL2V4dHJhL2Ryb3BSZXBlYXRzJ1xuICpcbiAqIGNvbnN0IHN0cmVhbSA9IHhzLm9mKDEsIDIsIDEsIDEsIDEsIDIsIDMsIDQsIDMsIDMpXG4gKiAgIC5jb21wb3NlKGRyb3BSZXBlYXRzKCkpXG4gKlxuICogc3RyZWFtLmFkZExpc3RlbmVyKHtcbiAqICAgbmV4dDogaSA9PiBjb25zb2xlLmxvZyhpKSxcbiAqICAgZXJyb3I6IGVyciA9PiBjb25zb2xlLmVycm9yKGVyciksXG4gKiAgIGNvbXBsZXRlOiAoKSA9PiBjb25zb2xlLmxvZygnY29tcGxldGVkJylcbiAqIH0pXG4gKiBgYGBcbiAqXG4gKiBgYGB0ZXh0XG4gKiA+IDFcbiAqID4gMlxuICogPiAxXG4gKiA+IDJcbiAqID4gM1xuICogPiA0XG4gKiA+IDNcbiAqID4gY29tcGxldGVkXG4gKiBgYGBcbiAqXG4gKiBFeGFtcGxlIHdpdGggYSBjdXN0b20gaXNFcXVhbCBmdW5jdGlvbjpcbiAqXG4gKiBgYGBqc1xuICogaW1wb3J0IGRyb3BSZXBlYXRzIGZyb20gJ3hzdHJlYW0vZXh0cmEvZHJvcFJlcGVhdHMnXG4gKlxuICogY29uc3Qgc3RyZWFtID0geHMub2YoJ2EnLCAnYicsICdhJywgJ0EnLCAnQicsICdiJylcbiAqICAgLmNvbXBvc2UoZHJvcFJlcGVhdHMoKHgsIHkpID0+IHgudG9Mb3dlckNhc2UoKSA9PT0geS50b0xvd2VyQ2FzZSgpKSlcbiAqXG4gKiBzdHJlYW0uYWRkTGlzdGVuZXIoe1xuICogICBuZXh0OiBpID0+IGNvbnNvbGUubG9nKGkpLFxuICogICBlcnJvcjogZXJyID0+IGNvbnNvbGUuZXJyb3IoZXJyKSxcbiAqICAgY29tcGxldGU6ICgpID0+IGNvbnNvbGUubG9nKCdjb21wbGV0ZWQnKVxuICogfSlcbiAqIGBgYFxuICpcbiAqIGBgYHRleHRcbiAqID4gYVxuICogPiBiXG4gKiA+IGFcbiAqID4gQlxuICogPiBjb21wbGV0ZWRcbiAqIGBgYFxuICpcbiAqIEBwYXJhbSB7RnVuY3Rpb259IGlzRXF1YWwgQW4gb3B0aW9uYWwgZnVuY3Rpb24gb2YgdHlwZVxuICogYCh4OiBULCB5OiBUKSA9PiBib29sZWFuYCB0aGF0IHRha2VzIGFuIGV2ZW50IGZyb20gdGhlIGlucHV0IHN0cmVhbSBhbmRcbiAqIGNoZWNrcyBpZiBpdCBpcyBlcXVhbCB0byBwcmV2aW91cyBldmVudCwgYnkgcmV0dXJuaW5nIGEgYm9vbGVhbi5cbiAqIEByZXR1cm4ge1N0cmVhbX1cbiAqL1xuZXhwb3J0IGRlZmF1bHQgZnVuY3Rpb24gZHJvcFJlcGVhdHM8VD4oaXNFcXVhbDogKCh4OiBULCB5OiBUKSA9PiBib29sZWFuKSB8IHVuZGVmaW5lZCA9IHZvaWQgMCk6IChpbnM6IFN0cmVhbTxUPikgPT4gU3RyZWFtPFQ+IHtcbiAgcmV0dXJuIGZ1bmN0aW9uIGRyb3BSZXBlYXRzT3BlcmF0b3IoaW5zOiBTdHJlYW08VD4pOiBTdHJlYW08VD4ge1xuICAgIHJldHVybiBuZXcgU3RyZWFtPFQ+KG5ldyBEcm9wUmVwZWF0c09wZXJhdG9yPFQ+KGlucywgaXNFcXVhbCkpO1xuICB9O1xufVxuIl19
+
+/***/ }),
+
 /***/ "./node_modules/xstream/extra/sampleCombine.js":
 /*!*****************************************************!*\
   !*** ./node_modules/xstream/extra/sampleCombine.js ***!
@@ -10339,55 +11455,242 @@ exports.default = xs;
 
 "use strict";
 
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const run_1 = __webpack_require__(/*! @cycle/run */ "./node_modules/@cycle/run/lib/es6/index.js");
+const run_1 = __importDefault(__webpack_require__(/*! @cycle/run */ "./node_modules/@cycle/run/lib/es6/index.js"));
 const dom_1 = __webpack_require__(/*! @cycle/dom */ "./node_modules/@cycle/dom/lib/es6/index.js");
 const http_1 = __webpack_require__(/*! @cycle/http */ "./node_modules/@cycle/http/lib/es6/index.js");
-const xstream_1 = __webpack_require__(/*! xstream */ "./node_modules/xstream/index.js");
-__webpack_require__(/*! snabbdom-pragma */ "./node_modules/snabbdom-pragma/dist/index.es6.js");
+const state_1 = __webpack_require__(/*! @cycle/state */ "./node_modules/@cycle/state/lib/es6/index.js");
+const isolate_1 = __importDefault(__webpack_require__(/*! @cycle/isolate */ "./node_modules/@cycle/isolate/lib/es6/index.js"));
+const xstream_1 = __importDefault(__webpack_require__(/*! xstream */ "./node_modules/xstream/index.js"));
+const catalogue_listing_1 = __webpack_require__(/*! ./components/catalogue-listing */ "./resources/ts/components/catalogue-listing.tsx");
+const flatten_sinks_1 = __webpack_require__(/*! ./cycle-utilities/flatten-sinks */ "./resources/ts/cycle-utilities/flatten-sinks.ts");
+const delay_1 = __importDefault(__webpack_require__(/*! xstream/extra/delay */ "./node_modules/xstream/extra/delay.js"));
 function main(sources) {
     // HTTP requests
-    const http = (sources) => xstream_1.default.merge(xstream_1.default.of({
-        url: '/api/graphql',
-        method: 'POST',
-        withCredentials: true,
-        accept: 'application/json',
-        send: {
-            query: `{
-                    catalogues {
-                        name,
-                        products {name, price}
-                    }
-                }`
+    const http = (sources) => xstream_1.default.merge(sources.state.stream
+        .map(state => {
+        var _a;
+        if ((_a = state.childState) === null || _a === void 0 ? void 0 : _a.update) {
+            return {
+                url: '/api/catalogues',
+                method: 'GET',
+                withCredentials: true,
+                accept: 'application/json',
+                category: 'catalogues'
+            };
         }
-    }), xstream_1.default.of({
-        url: '/api/products',
+    }).startWith({
+        url: '/api/catalogues',
         method: 'GET',
         withCredentials: true,
         accept: 'application/json',
-    }));
-    // Our intent
+        category: 'catalogues'
+    })).compose(delay_1.default(500));
+    // Our intention
     const intent = (sources) => sources.HTTP.select('catalogues');
     // Manipuldate data
     const model = (stream$) => stream$
         .map(response => response.replaceError(err => xstream_1.default.of(err)))
         .flatten()
-        .map(response => response.body.data)
-        .startWith(null);
-    // View
-    const view = (state$) => state$
-        .map(state => {
-        console.log(state);
+        .map(response => response.body)
+        .startWith([]);
+    // Reducer
+    const reduce = sources => model(intent(sources))
+        .map(state => function reducer(previousState) {
+        return Object.assign(Object.assign({}, previousState), { catalogues: state });
+    });
+    // Catalogue listing - loose coupling here!
+    const catalogueListing = isolate_1.default(catalogue_listing_1.CatalogueListingPane, {
+        // Nice and pure state with lenses
+        state: {
+            get: (state) => state,
+            set: (state, childState) => (Object.assign(Object.assign({}, state), { childState }))
+        }
+    })(sources);
+    // Flatten sinks into a unified stream of data
+    // Child components recieve state as a stream 😊
+    return flatten_sinks_1.flattenSinks(catalogueListing, {
+        HTTP: http(sources),
+        state: reduce(sources)
+    });
+}
+run_1.default(state_1.withState(main), {
+    DOM: dom_1.makeDOMDriver('#app'),
+    HTTP: http_1.makeHTTPDriver()
+});
+
+
+/***/ }),
+
+/***/ "./resources/ts/components/catalogue-listing.tsx":
+/*!*******************************************************!*\
+  !*** ./resources/ts/components/catalogue-listing.tsx ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CatalogueListingPane = void 0;
+const snabbdom_pragma_1 = __importDefault(__webpack_require__(/*! snabbdom-pragma */ "./node_modules/snabbdom-pragma/dist/index.es6.js"));
+const xstream_1 = __importDefault(__webpack_require__(/*! xstream */ "./node_modules/xstream/index.js"));
+const card_1 = __webpack_require__(/*! ./templates/card */ "./resources/ts/components/templates/card.tsx");
+const table_1 = __webpack_require__(/*! ./templates/table */ "./resources/ts/components/templates/table.tsx");
+exports.CatalogueListingPane = (sources) => {
+    // HTTP stream
+    const http = sources => sources.DOM.select('.generate')
+        .events('click', { preventDefault: true })
+        .mapTo({
+        url: '/api/generate',
+        method: 'GET',
+        withCredentials: true,
+        accept: 'application/json',
+        category: 'update'
+    });
+    // Intention
+    const intent = sources => sources.state.stream;
+    // Model
+    const model = stream$ => stream$;
+    // Render view
+    const view = (state$) => state$.map(state => {
+        // Map products
+        const products = state.catalogues
+            .map(catalogue => catalogue.products);
+        // Find a catalogue by it's id
+        const findCatalogueById = (id) => state.catalogues
+            .filter(catalogue => catalogue.id === id)
+            .reduce((previous, next) => next, null);
+        return snabbdom_pragma_1.default.createElement("div", null, card_1.Card("Products", [
+            snabbdom_pragma_1.default.createElement("div", { className: "d-flex flex-column" },
+                snabbdom_pragma_1.default.createElement("button", { className: "btn btn-primary generate" }, "Generate Random"),
+                snabbdom_pragma_1.default.createElement("small", { className: "text-muted" },
+                    snabbdom_pragma_1.default.createElement("i", null, "In other words, I was knackered last night finishing up this demonstration \uD83D\uDE0A")),
+                snabbdom_pragma_1.default.createElement("div", { className: "my-2" },
+                    snabbdom_pragma_1.default.createElement("h6", null, "Full Product Listing"),
+                    products.length > 0
+                        ? products.map(cataloguesProducts => {
+                            return snabbdom_pragma_1.default.createElement("details", null,
+                                snabbdom_pragma_1.default.createElement("summary", null, findCatalogueById(cataloguesProducts[0].catalogue_id).name || 'Unknown'),
+                                table_1.Table(['price', 'name'], cataloguesProducts.map(product => table_1.Row([product.price, product.name]))));
+                        })
+                        : snabbdom_pragma_1.default.createElement("i", { className: "fas fa-spinner fa-spin" })))
+        ]));
     });
     return {
         DOM: view(model(intent(sources))),
-        HTTP: http(sources)
+        HTTP: http(sources),
+        state: sources.HTTP.select('update')
+            .map(response => response.replaceError(err => xstream_1.default.of(err)))
+            .flatten()
+            .map(() => function reducer(previous) {
+            return Object.assign(Object.assign({}, previous), { update: true });
+        })
     };
+};
+
+
+/***/ }),
+
+/***/ "./resources/ts/components/templates/card.tsx":
+/*!****************************************************!*\
+  !*** ./resources/ts/components/templates/card.tsx ***!
+  \****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Card = void 0;
+const snabbdom_pragma_1 = __importDefault(__webpack_require__(/*! snabbdom-pragma */ "./node_modules/snabbdom-pragma/dist/index.es6.js"));
+exports.Card = (title, slot) => snabbdom_pragma_1.default.createElement("div", { className: "card" },
+    snabbdom_pragma_1.default.createElement("div", { className: "card-body" },
+        snabbdom_pragma_1.default.createElement("h1", { className: "card-title" }, title),
+        slot));
+
+
+/***/ }),
+
+/***/ "./resources/ts/components/templates/table.tsx":
+/*!*****************************************************!*\
+  !*** ./resources/ts/components/templates/table.tsx ***!
+  \*****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Row = exports.Table = void 0;
+const snabbdom_pragma_1 = __importDefault(__webpack_require__(/*! snabbdom-pragma */ "./node_modules/snabbdom-pragma/dist/index.es6.js"));
+exports.Table = (thead, slot) => snabbdom_pragma_1.default.createElement("table", { className: "table table-hover table-striped" },
+    snabbdom_pragma_1.default.createElement("thead", null, thead.map(thead => snabbdom_pragma_1.default.createElement("th", null, thead))),
+    slot);
+exports.Row = (columns) => snabbdom_pragma_1.default.createElement("tr", null, columns.map(text => snabbdom_pragma_1.default.createElement("td", null, text)));
+
+
+/***/ }),
+
+/***/ "./resources/ts/cycle-utilities/flatten-sinks.ts":
+/*!*******************************************************!*\
+  !*** ./resources/ts/cycle-utilities/flatten-sinks.ts ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.flattenSinks = void 0;
+const xstream_1 = __importDefault(__webpack_require__(/*! xstream */ "./node_modules/xstream/index.js"));
+/**
+ * Merges sinks - note, this assumes your stream is already flattened
+ * @param key
+ */
+function merge(components, key) {
+    return components
+        .filter((stream) => !!stream[key])
+        .map((stream) => stream[key])
+        .reduce(function (previous, current) {
+        return previous = xstream_1.default.merge(previous, current);
+    }, xstream_1.default.empty());
 }
-run_1.default(main, {
-    DOM: dom_1.makeDOMDriver('#dom'),
-    HTTP: http_1.makeHTTPDriver()
-});
+/**
+ * Flattens and unifies components into a single sink
+ * @param sinks
+ */
+function flattenSinks(...sinks) {
+    // Retrieve properties of S at runtime
+    const properties = sinks
+        .map(component => Object.keys(component))
+        .flat()
+        .filter(function (value, index, self) {
+        return self.indexOf(value) === index;
+    });
+    // Merged sink
+    let mergedSink = {};
+    properties.forEach(k => {
+        mergedSink[k] = merge(sinks, k);
+    });
+    return mergedSink;
+}
+exports.flattenSinks = flattenSinks;
 
 
 /***/ }),

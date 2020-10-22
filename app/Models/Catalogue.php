@@ -11,6 +11,13 @@ class Catalogue extends Model
     use HasFactory;
 
     /**
+     * Eager loads
+     *
+     * @var array
+     */
+    public $with = ['products'];
+
+    /**
      * Relationship to products
      *
      * @return Relation

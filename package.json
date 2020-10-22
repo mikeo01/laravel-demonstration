@@ -12,7 +12,9 @@
     "devDependencies": {
         "@cycle/dom": "^22.8.0",
         "@cycle/http": "^15.4.0",
+        "@cycle/isolate": "^5.2.0",
         "@cycle/run": "^5.5.0",
+        "@cycle/state": "^1.4.0",
         "axios": "^0.19",
         "cross-env": "^7.0.2",
         "laravel-mix": "^5.0.1",

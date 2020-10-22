@@ -29,5 +29,8 @@ Route::middleware(['api', 'auth:sanctum'])->group(function () {
          */
         Route::resource('/catalogues', Controllers\CatalogueController::class)
             ->only(['index', 'store']);
+
+        // Demonstration purposes
+        Route::get('/generate', [Controllers\GenerateRandomCatalogue::class, 'generate']);
     });
 });

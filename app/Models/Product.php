@@ -16,6 +16,13 @@ class Product extends Model
     use HasFactory;
 
     /**
+     * Fillable assignments
+     *
+     * @var array
+     */
+    public $fillable = ['name', 'price'];
+
+    /**
      * Relationship to products
      *
      * @return Relation

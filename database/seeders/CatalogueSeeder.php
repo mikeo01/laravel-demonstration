@@ -16,12 +16,12 @@ class CatalogueSeeder extends Seeder
     public function run()
     {
         // Create some catalogue listings
-        Catalogue::factory()->count(10)
+        Catalogue::factory()->count(1)
             ->create()
             ->each(function (Catalogue $catalogue) {
                 // Generate some products
                 $catalogue->products()
-                    ->createMany(Product::factory()->count(mt_rand(1, 100))->make()->toArray());
+                    ->createMany(Product::factory()->count(1)->make()->toArray());
             });
     }
 }

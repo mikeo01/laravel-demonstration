@@ -21,4 +21,5 @@ return [
     'debug' => Debug::RETHROW_UNSAFE_EXCEPTIONS,
     'uri' => env('GRAPHQLITE_URI', '/api/graphql'),
     'middleware' =>  ['api', 'auth:sanctum'],
+    'guard' => ['api']
 ];
