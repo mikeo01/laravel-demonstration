@@ -11474,6 +11474,8 @@ function main(sources) {
         .map(state => {
         var _a;
         if ((_a = state.childState) === null || _a === void 0 ? void 0 : _a.update) {
+            // I know, mutation is bad! I wouldn't do this usually
+            state.childState.update = false;
             return {
                 url: '/api/catalogues',
                 method: 'GET',

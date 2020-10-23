@@ -17,6 +17,9 @@ function main ( sources: Sources ): Sinks {
         sources.state.stream
             .map( state => {
                 if ( state.childState?.update ) {
+                    // I know, mutation is bad! I wouldn't do this usually
+                    state.childState.update = false;
+
                     return {
                         url: '/api/catalogues',
                         method: 'GET',
