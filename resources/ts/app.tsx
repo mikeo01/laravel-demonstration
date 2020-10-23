@@ -1,6 +1,6 @@
 import run from "@cycle/run";
 import { makeDOMDriver } from "@cycle/dom";
-import { makeHTTPDriver } from "@cycle/http";
+import { makeHTTPDriver, RequestInput } from "@cycle/http";
 import { withState } from "@cycle/state";
 import isolate from "@cycle/isolate";
 import xs, { Stream } from "xstream";
@@ -31,7 +31,7 @@ function main ( sources: Sources ): Sinks {
                 withCredentials: true,
                 accept: 'application/json',
                 category: 'catalogues'
-            } )
+            } ) as Stream<RequestInput>,
     ).compose( delay( 500 ) );
 
     // Our intention

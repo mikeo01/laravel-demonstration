@@ -21,9 +21,8 @@ function merge<S> ( components: Array<S>, key: string ): Stream<unknown> {
  */
 export function flattenSinks<S> ( ...sinks: Array<S> ): S {
     // Retrieve properties of S at runtime
-    const properties = sinks
-        .map( component => Object.keys( component ) )
-        .flat()
+    const properties = ( sinks as any )
+        .flatMap( component => Object.keys( component ) )
         .filter( function ( value, index, self ) {
             return self.indexOf( value ) === index;
         } );

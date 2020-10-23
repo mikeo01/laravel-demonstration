@@ -11,6 +11,13 @@ class Catalogue extends Model
     use HasFactory;
 
     /**
+     * Read connection
+     *
+     * @var string
+     */
+    protected $connection = 'read';
+
+    /**
      * Eager loads
      *
      * @var array

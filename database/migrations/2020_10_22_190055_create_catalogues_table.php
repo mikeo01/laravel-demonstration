@@ -13,14 +13,14 @@ class CreateCataloguesTable extends Migration
      */
     public function up()
     {
-        Schema::create('catalogues', function (Blueprint $table) {
+        Schema::connection('read')->create('catalogues', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->integer('stock')->default(0);
             $table->timestamps();
         });
 
-        Schema::create('products', function (Blueprint $table) {
+        Schema::connection('read')->create('products', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('catalogue_id');
             $table->string('name');
@@ -39,7 +39,7 @@ class CreateCataloguesTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('products');
-        Schema::dropIfExists('catalogues');
+        Schema::connection('read')->dropIfExists('products');
+        Schema::connection('read')->dropIfExists('catalogues');
     }
 }

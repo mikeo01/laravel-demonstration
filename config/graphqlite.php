@@ -20,6 +20,6 @@ return [
     'types' => 'App\\Models',
     'debug' => Debug::RETHROW_UNSAFE_EXCEPTIONS,
     'uri' => env('GRAPHQLITE_URI', '/api/graphql'),
-    'middleware' =>  ['api', 'auth:sanctum'],
+    'middleware' =>  ['api', 'auth:api,sanctum'],
     'guard' => ['api']
 ];

@@ -13,7 +13,7 @@ class CreateActivitiesTable extends Migration
      */
     public function up()
     {
-        Schema::connection('users')->create('activities', function (Blueprint $table) {
+        Schema::connection('read')->create('activities', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->string('request_uri')->nullable();
@@ -31,6 +31,6 @@ class CreateActivitiesTable extends Migration
      */
     public function down()
     {
-        Schema::connection('users')->dropIfExists('activities');
+        Schema::connection('read')->dropIfExists('activities');
     }
 }

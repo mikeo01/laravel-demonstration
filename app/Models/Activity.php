@@ -10,6 +10,13 @@ class Activity extends Model
     use HasFactory;
 
     /**
+     * Read connection
+     *
+     * @var string
+     */
+    protected $connection = 'read';
+
+    /**
      * Mass fillable
      *
      * @var array

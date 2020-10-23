@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware(['api', 'auth:sanctum'])->group(function () {
+Route::middleware(['api', 'auth:api,sanctum'])->group(function () {
     Route::middleware(UserActivity::class)->group(function () {
         /**
          * REST API to products

@@ -39,7 +39,6 @@ export const CatalogueListingPane = ( sources: Sources ): Sinks => {
                 <a href="/download" className="btn btn-secondary my-4">Download</a>,
                 <div className="d-flex flex-column">
                     <button className="btn btn-primary generate">Generate Random</button>
-                    <small className="text-muted"><i>In other words, I was knackered last night finishing up this demonstration 😊</i></small>
 
                     {/* Product listing */ }
                     <div className="my-2">

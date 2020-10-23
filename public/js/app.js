@@ -11571,8 +11571,6 @@ exports.CatalogueListingPane = (sources) => {
             snabbdom_pragma_1.default.createElement("a", { href: "/download", className: "btn btn-secondary my-4" }, "Download"),
             snabbdom_pragma_1.default.createElement("div", { className: "d-flex flex-column" },
                 snabbdom_pragma_1.default.createElement("button", { className: "btn btn-primary generate" }, "Generate Random"),
-                snabbdom_pragma_1.default.createElement("small", { className: "text-muted" },
-                    snabbdom_pragma_1.default.createElement("i", null, "In other words, I was knackered last night finishing up this demonstration \uD83D\uDE0A")),
                 snabbdom_pragma_1.default.createElement("div", { className: "my-2" },
                     snabbdom_pragma_1.default.createElement("h6", null, "Full Product Listing"),
                     products.length > 0
@@ -11679,8 +11677,7 @@ function merge(components, key) {
 function flattenSinks(...sinks) {
     // Retrieve properties of S at runtime
     const properties = sinks
-        .map(component => Object.keys(component))
-        .flat()
+        .flatMap(component => Object.keys(component))
         .filter(function (value, index, self) {
         return self.indexOf(value) === index;
     });

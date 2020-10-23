@@ -16,7 +16,7 @@ class CatalogueSeeder extends Seeder
     public function run()
     {
         // Create some catalogue listings
-        Catalogue::factory()->count(1)
+        Catalogue::factory()->count(5)
             ->create()
             ->each(function (Catalogue $catalogue) {
                 // Generate some products
