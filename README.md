@@ -37,9 +37,5 @@ The site is just a simple shopping cart (traditional demonstration) to cover the
 - [ ] Basic use case
 - [x] Basic ER diagram
 
-## Front-end application
-
-Whilst I of course understand you use React heavily, I thought I'd showcase at least my knowledge in writing a simple front-end application that consumes this service purely for demonstration purposes.
-
 ## ER
 ![](./reversed-engineered-model.png)
