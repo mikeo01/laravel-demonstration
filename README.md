@@ -1,8 +1,6 @@
 # Basic Project Application
 
-A very simple project writeup using Laravel to showcase some important fundamentals.
-
-The site is just a simple shopping cart (traditional demonstration) to cover the majority of major concepts a typical web application goes through
+Personal use.
 
 - [x] Authentication
 - [x] Authorisation
